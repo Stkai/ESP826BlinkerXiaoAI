@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "array": "cpp",
+        "memory": "cpp",
+        "ranges": "cpp",
+        "functional": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "*.tcc": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "string_view": "cpp",
+        "iostream": "cpp",
+        "cstring": "cpp"
+    }
+}
