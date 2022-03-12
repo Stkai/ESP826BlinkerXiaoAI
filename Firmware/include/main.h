@@ -1,7 +1,3 @@
-//
-// Created by stkai on 2022/3/10.
-//
-
 #include <Blinker.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>
@@ -13,7 +9,7 @@
 
 void handleResetButtonPressStop();
 
-void HandleRestButtonDuringLongPress();
+void handleRestButtonDuringLongPress();
 
 bool restoreConfig();
 
@@ -29,4 +25,4 @@ void startWebServer();
 
 void switchCallback(const String &state);
 
-String makePage(String title, String contents);
+String makePage(const String &title, const String &contents);

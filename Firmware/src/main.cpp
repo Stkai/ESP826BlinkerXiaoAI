@@ -16,19 +16,20 @@ int defDegrees = 90;  // 默认位置
 int onDegrees = 45;   // 开灯位置
 int offDegrees = 135; // 关灯位置
 
-const IPAddress LocalIp(192, 168, 1, 1);
+const IPAddress localIp(192, 168, 1, 1);
 
 const char *ssidConfig = "ESP8266_Setup"; //网络配置名称
-
+char blinkerButtonLampKey[] = "btn-lamp";
+char blinkerButtonCountKey[] = "num-counter";
 DNSServer dnsServer;
 
 boolean isSettingMode; // 设置模式
 String ssidList;
 
-Servo ServoLamp;
+Servo servoLamp;
 
-BlinkerButton buttonLamp("btn-lamp");     // Blinker 组件键名
-BlinkerNumber numberCount("num-counter"); // 点击计数按键
+BlinkerButton buttonLamp(blinkerButtonLampKey);    // Blinker 组件键名
+BlinkerNumber numberCount(blinkerButtonCountKey);        // 点击计数按键
 int numberCounter = 0;                   // 点击计数按键计数器
 
 ESP8266WebServer webServer(80);
@@ -44,7 +45,7 @@ void setup() {
     buttonRest.reset();
     buttonRest.setPressTicks(5000);
     buttonRest.attachLongPressStop(handleResetButtonPressStop);
-    buttonRest.attachDuringLongPress(HandleRestButtonDuringLongPress);
+    buttonRest.attachDuringLongPress(handleRestButtonDuringLongPress);
 
     if (restoreConfig()) {
         isSettingMode = false;
@@ -59,10 +60,10 @@ void setup() {
         buttonLamp.attach(switchCallback);
 
         //舵机初始化
-        ServoLamp.attach(SERVO_BUILTIN);
-        ServoLamp.write(defDegrees);
+        servoLamp.attach(SERVO_BUILTIN);
+        servoLamp.write(defDegrees);
         delay(100);
-        ServoLamp.detach();
+        servoLamp.detach();
         // 小爱电源操作回调函数
         BlinkerMIOT.attachPowerState(switchCallback);
 
@@ -86,26 +87,29 @@ void loop() {
     }
 }
 
-// 按下按键即会执行该函数
+/**
+ * @brief 按下按键即会执行该函数
+ * @param state
+ */
 void switchCallback(const String &state) {
     BLINKER_LOG("电灯状态: ", state);
     numberCounter++;
     numberCount.print(numberCounter);
-    ServoLamp.attach(SERVO_BUILTIN);
+    servoLamp.attach(SERVO_BUILTIN);
     if (state == BLINKER_CMD_ON) {
-        ServoLamp.write(onDegrees);
+        servoLamp.write(onDegrees);
         buttonLamp.print(BLINKER_CMD_ON);
 
         BlinkerMIOT.powerState(BLINKER_CMD_ON);
         BlinkerMIOT.print();
 
         ledBlink(100, 5);
-        ServoLamp.write(defDegrees);
+        servoLamp.write(defDegrees);
     }
     if (state == BLINKER_CMD_OFF) {
         digitalWrite(LED_BUILTIN, HIGH);
 
-        ServoLamp.write(offDegrees);
+        servoLamp.write(offDegrees);
         buttonLamp.print(BLINKER_CMD_OFF);
 
         BlinkerMIOT.powerState(BLINKER_CMD_OFF);
@@ -113,9 +117,9 @@ void switchCallback(const String &state) {
 
         ledBlink(100, 5);
 
-        ServoLamp.write(defDegrees);
+        servoLamp.write(defDegrees);
     }
-    ServoLamp.detach();
+    servoLamp.detach();
 }
 
 // 如果未绑定的组件被触发，则会执行其中内容
@@ -158,9 +162,9 @@ bool restoreConfig() {
         onDegrees = EEPROM.read(EEPROM_START_ADDRESS + 113);
         offDegrees = EEPROM.read(EEPROM_START_ADDRESS + 114);
 
-        Serial.printf("SSID:%s\n", ssid);
-        Serial.printf("pswd:%s\n", pswd);
-        Serial.printf("auth:%s\n", auth);
+        Serial.printf("SSID:%s\r\n", ssid);
+        Serial.printf("pswd:%s\r\n", pswd);
+        Serial.printf("auth:%s\r\n", auth);
         EEPROM.end();
         return true;
     } else {
@@ -186,9 +190,9 @@ void setupMode() {
     }
     delay(100);
     WiFi.mode(WIFI_AP);
-    WiFi.softAPConfig(LocalIp, LocalIp, IPAddress(255, 255, 255, 0));
+    WiFi.softAPConfig(localIp, localIp, IPAddress(255, 255, 255, 0));
     WiFi.softAP(ssidConfig);
-    dnsServer.start(53, "*", LocalIp);
+    dnsServer.start(53, "*", localIp);
     startWebServer();
     Serial.print("启动无线AP \"");
     Serial.print(ssidConfig);
@@ -228,7 +232,7 @@ void startWebServer() {
         Serial.print("pswd: ");
         Serial.println(pswd);
         strcpy(auth, webServer.arg("auth").c_str());
-        Serial.printf("auth:%s\n", auth);
+        Serial.printf("auth:%s\r\n", auth);
 
         Serial.println("开始写入配置信息.....");
         EEPROM.put(EEPROM_START_ADDRESS + 0, ssid);
@@ -249,7 +253,7 @@ void startWebServer() {
     webServer.begin();
 }
 
-String makePage(String title, String contents) {
+String makePage(const String& title, const String& contents) {
     String s = "<!DOCTYPE html><html><head>";
     s += R"(<meta name="viewport" content="width=device-width,user-scalable=0">)";
     s += "<title>";
@@ -277,7 +281,7 @@ void handleResetButtonPressStop() {
  * @brief 按键长按中
  *
  */
-void HandleRestButtonDuringLongPress() {
+void handleRestButtonDuringLongPress() {
     ledBlink(50, 1);
 }
 
@@ -308,11 +312,11 @@ void saveServoDegrees(int address, int degrees) {
         EEPROM.write(address, degrees);
         EEPROM.end();
         Blinker.print("保存舵机位置:", degrees);
-        ServoLamp.attach(SERVO_BUILTIN);
-        ServoLamp.write(degrees);
+        servoLamp.attach(SERVO_BUILTIN);
+        servoLamp.write(degrees);
         delay(1000);
-        ServoLamp.write(defDegrees);
-        ServoLamp.detach();
+        servoLamp.write(defDegrees);
+        servoLamp.detach();
     } else {
         Blinker.print("参数错误,舵机位置保存失败!");
     }
